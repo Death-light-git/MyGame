@@ -5,6 +5,8 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 
 public class CharacterAnimation {
     public enum State {
@@ -30,6 +32,8 @@ public class CharacterAnimation {
     private float comboResetDelay = 1.0f;
     private int attackStep = 0;
 
+    private boolean damageAppliedThisFrame = false;
+
     private TextureRegion currentFrame;
 
     public CharacterAnimation() {
@@ -52,6 +56,24 @@ public class CharacterAnimation {
         return new Animation<>(frameDuration, frames);
     }
 
+    // New method to return the attack hitbox
+    public Rectangle getAttackHitbox(float x, float y) {
+        if (!isAttacking()) return null;
+
+        int frameWidth = currentFrame.getRegionWidth();
+        int frameHeight = currentFrame.getRegionHeight();
+
+        // Create attack hitbox based on the character's facing direction
+        float hitboxX = facingRight ? x + frameWidth : x - frameWidth;
+        float attackWidth = 50;  // Example width of the attack hitbox
+        float attackHeight = 30; // Example height of the attack hitbox
+        float attackX = x - 20;  // Adjust based on the character's attack position
+        float attackY = y - 20;  // Adjust based on the character's attack position
+
+        // Define attack range (adjust as needed)
+        return new Rectangle(attackX, attackY , attackWidth, attackHeight);
+    }
+
     public void setWalking(boolean walking) {
         isWalking = walking;
     }
@@ -72,6 +94,12 @@ public class CharacterAnimation {
         } else {
             attackQueued = true;
         }
+    }
+    public boolean isDamageAppliedThisFrame() {
+        return damageAppliedThisFrame;
+    }
+    public void setDamageAppliedThisFrame(boolean damageApplied) {
+        this.damageAppliedThisFrame = damageApplied;
     }
 
     private void startAttack() {
@@ -111,7 +139,6 @@ public class CharacterAnimation {
 
         Animation<TextureRegion> currentAnim;
 
-        // Choose animation based on flags
         if (isDead()) {
             currentAnim = deathAnimation;
             currentState = State.DEAD;
@@ -125,9 +152,10 @@ public class CharacterAnimation {
         } else if (isJumping) {
             if (currentState != State.JUMP) {
                 currentState = State.JUMP;
-                stateTime = 0f; // Start jump animation from frame 0
-            } currentAnim = jumpAnimation;}
-            else if (isWalking) {
+                stateTime = 0f;
+            }
+            currentAnim = jumpAnimation;
+        } else if (isWalking) {
             currentAnim = walkAnimation;
             currentState = State.WALK;
         } else {
@@ -135,11 +163,9 @@ public class CharacterAnimation {
             currentState = State.IDLE;
         }
 
-        // ✅ Fix: Only loop idle & walk animations
         boolean looping = currentState == State.IDLE || currentState == State.WALK;
         currentFrame = currentAnim.getKeyFrame(stateTime, looping);
 
-        // Flip character sprite based on direction
         if (!facingRight && !currentFrame.isFlipX()) currentFrame.flip(true, false);
         if (facingRight && currentFrame.isFlipX()) currentFrame.flip(true, false);
 
@@ -153,7 +179,6 @@ public class CharacterAnimation {
 
         batch.draw(currentFrame, drawX, drawY);
 
-        // Combo attack logic
         if (isAttacking() && currentAnim.isAnimationFinished(stateTime)) {
             if (attackQueued && attackStep < 3) {
                 attackQueued = false;
@@ -171,22 +196,16 @@ public class CharacterAnimation {
             }
         }
 
-        // Combo reset timer
         if (!isAttacking() && attackStep > 0) {
             comboResetTimer += delta;
             if (comboResetTimer >= comboResetDelay) {
                 attackStep = 0;
                 comboResetTimer = 0;
             }
+
         }
-
-
-        if (!isAttacking() && attackStep > 0) {
-            comboResetTimer += delta;
-            if (comboResetTimer >= comboResetDelay) {
-                attackStep = 0;
-                comboResetTimer = 0;
-            }
+        if (currentAnim.isAnimationFinished(stateTime)) {
+            damageAppliedThisFrame = false;  // Reset the flag after the animation step
         }
     }
 

@@ -19,6 +19,11 @@ public class Orc extends Enemy {
     private float lastHitTime = -999f;
     private float hitCooldown = 0.5f;
 
+    private boolean isHurt = false;
+    private float hurtDuration = 0.3f;
+    private float hurtTimer = 0f;
+
+
     public Orc(float x, float y) {
         super(x, y, 50);
         startX = x;
@@ -55,6 +60,14 @@ public class Orc extends Enemy {
 
         if (isDead) return;
 
+        if (isHurt) {
+            hurtTimer += delta;
+            if (hurtTimer >= hurtDuration) {
+                isHurt = false;
+            }
+            return; // Pause movement while hurt
+        }
+
         if (walkingForward) {
             x += patrolSpeed * delta;
             if (x > startX + patrolDistance) {
@@ -75,6 +88,8 @@ public class Orc extends Enemy {
         Animation<TextureRegion> anim;
         if (isDead) {
             anim = deadAnim;
+        } else if (isHurt) {
+            anim = hurtAnim;
         } else {
             anim = walkAnim;
         }
@@ -85,6 +100,16 @@ public class Orc extends Enemy {
         if (facingRight && currentFrame.isFlipX()) currentFrame.flip(true, false);
 
         batch.draw(currentFrame, x, y);
+    }
+
+    @Override
+    public void takeDamage(int amount) {
+        if (isDead) return;
+        super.takeDamage(amount);
+        if (!isDead) {
+            isHurt = true;
+            hurtTimer = 0f;
+        }
     }
 
     @Override

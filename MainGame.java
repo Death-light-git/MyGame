@@ -1,4 +1,5 @@
 package com.mygame.platformer;
+
 import com.badlogic.gdx.utils.Array;
 import com.mygame.platformer.Enemy;
 import com.mygame.platformer.Orc;
@@ -15,8 +16,6 @@ import com.badlogic.gdx.utils.TimeUtils;
 import java.util.ArrayList;
 import java.util.Iterator;
 import com.badlogic.gdx.math.Rectangle;
-
-
 
 public class MainGame extends ApplicationAdapter {
     private SpriteBatch batch;
@@ -56,7 +55,7 @@ public class MainGame extends ApplicationAdapter {
 
         if (!character.isDead()) {
             // Jump
-                      if (Gdx.input.isKeyJustPressed(Input.Keys.UP) && onGround) {
+            if (Gdx.input.isKeyJustPressed(Input.Keys.UP) && onGround) {
                 velocityY = JUMP_VELOCITY;
                 onGround = false;
                 character.setJumping(true);
@@ -121,7 +120,7 @@ public class MainGame extends ApplicationAdapter {
             Rectangle enemyHitbox = enemy.getHitbox();
 
             // Player takes damage on contact
-            if (!character.isDead() && playerHitbox.overlaps(enemyHitbox) && (!enemy.isDead)) {
+            if (!character.isDead() && playerHitbox.overlaps(enemyHitbox) && (!enemy.isDead())) {
                 float currentTime = TimeUtils.nanoTime() / 1_000_000_000f; // convert to seconds
                 if (currentTime - lastTimePlayerDamaged >= playerDamageCooldown) {
                     lastTimePlayerDamaged = currentTime;
@@ -133,13 +132,15 @@ public class MainGame extends ApplicationAdapter {
                 }
             }
 
-
             // Enemy takes damage if player is attacking and overlaps
-            if (character.isAttacking() && !enemy.isDead() && playerHitbox.overlaps(enemyHitbox) && enemy.canBeHit()) {
-                enemy.takeDamage(15);
-
-                enemy.registerHit();
-                damageTexts.add(new FloatingText("-15", enemyHitbox.x, enemyHitbox.y + 60));
+            if (character.isAttacking() && !enemy.isDead() && character.getAttackHitbox(x, y).overlaps(enemyHitbox)) {
+                // Prevent multiple damage applications per frame by checking if damage has been applied during this attack step
+                if (!character.isDamageAppliedThisFrame()) {
+                    enemy.takeDamage(15);
+                    enemy.registerHit();
+                    damageTexts.add(new FloatingText("-15", enemyHitbox.x, enemyHitbox.y + 60));
+                    character.setDamageAppliedThisFrame(true); // Mark that damage was applied
+                }
             }
         }
 
